@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Iterable
 
-from sample import Sample
+from sample import Sample, TestingKnownSample, TrainingKnownSample, InvalidSampleError
 from hyperparameter import Hyperparameter
 
 
@@ -16,23 +16,20 @@ class TrainingData:
         self.testing: List[Sample] = []
         self.tuning: List[Hyperparameter] = []
 
-    def load(self, raw_data_source: Iterable[dict[str, str]]) -> None:
+    def load(self, raw_data_iter: Iterable[dict[str, str]]) -> None:
         """Load and partition the raw data"""
-        for n, row in enumerate(raw_data_source):
-            # sample = Sample(
-            #     sepal_length=float(row['sepal_length']),
-            #     sepal_width=float(row['sepal_width']),
-            #     petal_length=float(row['petal_length']),
-            #     petal_width=float(row['petal_width']),
-            #     species=row['species']
-            # )
-
-            # if n % 5:
-            #     self.training.append(sample)
-            # else:
-            #     self.testing.append(sample)
-            pass
-
+        bad_count = 0
+        for n, row in enumerate(raw_data_iter):
+            try:
+                if n % 5 == 0:
+                    test = TestingKnownSample.from_dict(row)
+                    self.testing.append(test)
+                else:
+                    train = TrainingKnownSample.from_dict(row)
+                    self.training.append(train)
+            except InvalidSampleError as ex:
+                print(f"Row {n+1}: {ex}")
+                bad_count += 1
         self.uploaded = datetime.datetime.now(tz=datetime.timezone.utc)
 
     def test(self, parameter: Hyperparameter, sample: Sample) -> None:
